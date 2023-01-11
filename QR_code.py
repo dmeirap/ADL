@@ -19,10 +19,10 @@ while True:
         
         #print('decoded', d.type, 'symbol', '"%s"' % d.data) 
         
-        topLeftCorners = (d.rect.left, d.rect.top)
-        topRightCorners = (d.rect.left + d.rect.width, d.rect.top) 
-        bottomLeftCorners = (d.rect.left, d.rect.top + d.rect.height)     
-        bottomRightCorners  = (d.rect.left + d.rect.width, d.rect.top + d.rect.height)  
+        topLeftCorners = (int(d.rect.left), int(d.rect.top))
+        topRightCorners = (int(d.rect.left + d.rect.width), int(d.rect.top)) 
+        bottomLeftCorners = (int(d.rect.left), int(d.rect.top + d.rect.height))     
+        bottomRightCorners  = (int(d.rect.left + d.rect.width), int(d.rect.top + d.rect.height))  
         
         cv2.line(im, topLeftCorners, topRightCorners, (0, 255, 0), 2)
         cv2.line(im, topLeftCorners, bottomLeftCorners, (0, 255, 0), 2)
@@ -74,11 +74,11 @@ while True:
         rmat, jac = cv2.Rodrigues(rotation_vector)
         angles, mtxR, mtxQ, Qx, Qy, Qz = cv2.RQDecomp3x3(rmat)
         
-        print("\nRotation X: {0}".format(angles[0]))
-        print("Rotation Y: {0}".format(angles[1]))
-        print("Rotation Z: {0}".format(angles[2]))
-        print("\nTranslation X: {0}".format(translation_vector[0]))
-        print("Translation Y: {0}".format(translation_vector[1]))
+        #print("\nRotation Pitch: {0}".format(angles[0]))
+        print("\nRotation Yaw: {0}".format(angles[1]))
+        #print("Rotation Roll: {0}".format(angles[2]))
+        #print("\nTranslation X: {0}".format(translation_vector[0]))
+        #print("Translation Y: {0}".format(translation_vector[1]))
         print("Translation Z: \n {0}".format(translation_vector[2]))
 
         # Project a 3D point (0, 0, 1000.0) onto the image plane. Define la distancia estimada a la que debe estar la camara del objeto
