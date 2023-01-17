@@ -7,10 +7,13 @@ cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 window_name = 'OpenCV QR Code'
 cv2.namedWindow(window_name, 0)
+#fourcc = cv2.VideoWriter_fourcc(*'MP4V')
+out = cv2.VideoWriter('output.mp4', 0x00000021, 5.0, (1920, 1080))
 
 while True:
     ret, im = cap.read()
-
+    out.write(im)
+     
     if ret:
         ret_qr, decoded_info, qr_points, _ = qr.detectAndDecodeMulti(im)
         if ret_qr:
@@ -23,7 +26,7 @@ while True:
                     color = (0, 0, 255)
                 
                 im = cv2.polylines(im, [p.astype(int)], True, color, 6)
-
+            
                 topLeftCorners = qr_points[0][3]
                 topRightCorners = qr_points[0][2]
                 bottomLeftCorners = qr_points[0][0]    
@@ -70,13 +73,20 @@ while True:
 
                 rmat, jac = cv2.Rodrigues(rotation_vector)
                 angles, mtxR, mtxQ, Qx, Qy, Qz = cv2.RQDecomp3x3(rmat)
+                translacion = np.matrix(rmat).T * np.matrix(translation_vector)
                 
+                #print("\nRotation Roll: {0}".format(angles[0]))
                 print("\nRotation Yaw: {0}".format(angles[1]))
-                print("\nTranslation Z: {0}".format(translation_vector[2]))
+                #print("\nRotation Pitch: {0}".format(angles[2]))
+                #print("\nTranslation X: {0}".format(translation_vector[0]))
+                #print("\nTranslation Y: {0}".format(translation_vector[1]))
+                #print("\nTranslation Z: {0}".format(translation_vector[2]))
+                print("\nTranslation:{0}".format(translacion[2]))
+                
                 
         cv2.imshow(window_name, im)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-
+out.release()
 cv2.destroyWindow(window_name)
