@@ -1,10 +1,12 @@
-
 from PIL import Image, ImageColor,ImageDraw, ImageFont 
 import cv2 
-from pyzbar.pyzbar import decode 
+from pyzbar.pyzbar import decode, ZBarSymbol
 import numpy as np 
+import time
+import openpyxl
+import math
 
-cap = cv2.VideoCapture(1) # 0 = (camara interna) ; 1 = (camara externa)
+cap = cv2.VideoCapture(1)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 cv2.namedWindow("Output", 0)
@@ -13,76 +15,79 @@ while True:
     ret, im = cap.read()
     if not ret:
         continue
-    gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY, dstCn=0)
     
-    for d in decode(im):
+    for d in decode(im, symbols=[ZBarSymbol.QRCODE]):
         
-        print('\n\nDecoded: ', d.type, 'Symbol: ', '"%s"' % d.data) 
+        print('\n\nCodigo: ', d.type, 'Symbol: ', d.data) 
         
         topLeftCorners = d.polygon[1]
         topRightCorners = d.polygon[2] 
         bottomLeftCorners = d.polygon[0]     
-        bottomRightCorners  = d.polygon[3] 
+        bottomRightCorners  = d.polygon[3]
         
-        im = cv2.polylines(im, [np.int32([d.polygon])], True, (0, 255, 0), 6)
+        im = cv2.polylines(im, [np.array([d.polygon])], True, (255, 255, 0), 6)
 
+        #Esquinas del QR
         image_points = np.array([
-            (int((topLeftCorners[0]+topRightCorners[0])/2),
-             int((topLeftCorners[1]+bottomLeftCorners[1])/2)),     # Nose
             topLeftCorners,   
-            topRightCorners,     
-            bottomLeftCorners,     
-            bottomRightCorners      
+            topRightCorners,
+            bottomRightCorners,     
+            bottomLeftCorners    
         ], dtype="double")
         
-        # Coordenadas de cada esquina
+        # Dimensiones QR
         model_points = np.array([
-            (0.0, 0.0, 0.0),             # Nose
-            # Left top corner
             (-46.50, 46.50, 0),
-            # Right top corner
             (46.50, 46.50, 0),
-            # Left bottom corner
-            (-46.50, -46.50, 0),
-            # Right bottom corner
-            (46.50, -46.50, 0)
+            (46.50, -46.50, 0),
+            (-46.50, -46.50, 0)
         ],dtype="double")
         
-        #************ SET PARAMETROS CAMARA *********************
+        #******* SET PARAMETROS CAMARA **********
         camera_matrix = np.array(
-            [[773.74013464, 0, 957.40574841],
-             [0,  774.15094158, 560.68397322],
-             [0, 0, 1]], dtype="double"
+            [[776.34474311, 0, 946.84727768],
+            [0,  779.03968654, 550.44881788],
+            [0, 0, 1]], dtype="double"
         )
         
-        dist_coeffs = np.zeros((5, 1),dtype="double")  # Lens distortion
-        dist_coeffs[0,0] = -0.005905527127455908
-        dist_coeffs[1,0] = 0.03188619089891427
-        dist_coeffs[2,0] = -0.008733485736477005
-        dist_coeffs[3,0] = -0.0007170139797843391
-        dist_coeffs[4,0] = -0.06968794979128276
+        dist_coeffs = np.array(
+                    [[0.00975813],
+                     [-0.02868024],
+                     [-0.01228495],
+                     [-0.00277628],
+                     [-0.00719628]], dtype="double"
+        )
     
         try:
-            (success, rotation_vector, translation_vector) = cv2.solvePnP(model_points, image_points, camera_matrix, dist_coeffs, flags=cv2.SOLVEPNP_SQPNP)
+            (success, rotation_vector, translation_vector) = cv2.solvePnP(model_points, image_points, camera_matrix, dist_coeffs)
         except:
             continue
-
+        
+        unitv_points = np.array([[0,0,0], [46.50,0,0], [0,46.50,0], [0,0,46.50]], dtype = 'float32').reshape((4,1,3))
+        axis_points, jac = cv2.projectPoints(unitv_points, rotation_vector, translation_vector, camera_matrix, dist_coeffs)        
+        colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0,0,0)]
+        if len(axis_points) > 0:
+                axis_points = axis_points.reshape((4,2))
+                origin = (int(axis_points[0][0]),int(axis_points[0][1]) )
+                for p, c in zip(axis_points[1:], colors[:3]):
+                    p = (int(p[0]), int(p[1]))
+                    if origin[0] > 5*im.shape[1] or origin[1] > 5*im.shape[1]:break
+                    if p[0] > 5*im.shape[1] or p[1] > 5*im.shape[1]:break
+                    cv2.line(im, origin, p, c, 5)
+                           
         rmat, jac = cv2.Rodrigues(rotation_vector)
         angles, mtxR, mtxQ, Qx, Qy, Qz = cv2.RQDecomp3x3(rmat)
         translacion = np.matrix(rmat).T * np.matrix(translation_vector)
+        control = rmat[0][1]
         
-        #print("\nRotation Pitch: {0}".format(angles[0]))
-        print("\nRotation Yaw: {0}".format(angles[1]))
-        #print("Rotation Roll: {0}".format(angles[2]))
-        #print("\nTranslation X: {0}".format(translation_vector[0]))
-        #print("Translation Y: {0}".format(translation_vector[1]))
-        #print("\nTranslation Z:{0}".format(translation_vector[2]))
-        print("\nTranslation:{0}".format(translacion[2]))
-        
- 
-                
+        if control > 0.5:
+            print("\nRotation Yaw: ",angles[0])
+        elif control < 0.5:
+            print("\nRotation Yaw: ",-(angles[1]))
+            
+        print("Distancia Z: ",translacion.item(2))
+                        
     cv2.imshow("Output", im)
-    
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
     
