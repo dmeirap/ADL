@@ -1,0 +1,3 @@
+/home/themeigo/adl/qr_src/build/CMakeFiles/rebuild_cache.dir
+/home/themeigo/adl/qr_src/build/CMakeFiles/edit_cache.dir
+/home/themeigo/adl/qr_src/build/CMakeFiles/qr_src.dir
